@@ -182,17 +182,31 @@ def bootup():
 def sound(emotion):
     for i in range(1):
 	    os.system("aplay /home/pi/Desktop/EmoBot/sound/"+emotion+".wav")
-    
-def show(emotion,count):
-    for i in range(count):
+
+
+def show(emotion, count):
+    for _ in range(count):
         try:
             disp = LCD_2inch.LCD_2inch()
             disp.Init()
             for i in range(frame_count[emotion]):
-                image = Image.open('/home/pi/Desktop/EmoBot/emotions/'+emotion+'/frame'+str(i)+'.png')	
-                disp.ShowImage(image)
+                image_path = '/home/pi/Desktop/EmoBot/Code/emotions/' + emotion + '/frame' + str(i) + '.png'
+                print("Loading image:", image_path)
+
+                try:
+                    image = Image.open(image_path)
+                except Exception as e:
+                    print("Error loading image:", e)
+                    continue
+
+                image = image.resize((disp.width, disp.height))
+                image = image.rotate(-90)
+                disp.ShowImage(image, 0, 0)
+#                time.sleep(0.5)
+
         except IOError as e:
-            logging.info(e)    
+            logging.info(e)
+
         except KeyboardInterrupt:
             disp.module_exit()
             servoDown()
@@ -203,41 +217,43 @@ if __name__ == '__main__':
     p1 = multiprocessing.Process(target=check_sensor, name='p1')
     p1.start()
     bootup()
+    p5 = None  # Initialize p5 as None
     while True:
         if event.is_set():
+            if p5 is not None:  # Check if p5 is not None before terminating
                 p5.terminate()
-                event.clear()
-                emotion = q.get()
-                q.empty()
-                print(emotion)
-                p2 = multiprocessing.Process(target=show,args=(emotion,4))
-                p3 = multiprocessing.Process(target=sound,args=(emotion,))
-                if emotion == 'happy':
-                    p4 = multiprocessing.Process(target=happy)
-                elif emotion == 'angry':
-                    p4 = multiprocessing.Process(target=angry)
-                elif emotion == 'sad':
-                    p4 = multiprocessing.Process(target=sad)
-                elif emotion == 'excited':
-                    p4 = multiprocessing.Process(target=excited)
-                elif emotion == 'blink':
-                    p4 = multiprocessing.Process(target=blink)
-                else:
-                    continue
-                p2.start()
-                p3.start()
-                p4.start()
-                p2.join()
-                p3.join()
-                p4.join()
+            event.clear()
+            emotion = q.get()
+            q.empty()
+            print(emotion)
+            p2 = multiprocessing.Process(target=show, args=(emotion, 4))
+            p3 = multiprocessing.Process(target=sound, args=(emotion,))
+            if emotion == 'happy':
+                p4 = multiprocessing.Process(target=happy)
+            elif emotion == 'angry':
+                p4 = multiprocessing.Process(target=angry)
+            elif emotion == 'sad':
+                p4 = multiprocessing.Process(target=sad)
+            elif emotion == 'excited':
+                p4 = multiprocessing.Process(target=excited)
+            elif emotion == 'blink':
+                p4 = multiprocessing.Process(target=blink)
+            else:
+                continue
+            p2.start()
+            p3.start()
+            p4.start()
+            p2.join()
+            p3.join()
+            p4.join()
         else:
             p = multiprocessing.active_children()
             for i in p:
-                if i.name not in ['p1','p5','p6']:
+                if i.name not in ['p1', 'p5', 'p6']:
                     i.terminate()
             neutral = normal[0]
-            p5 = multiprocessing.Process(target=show,args=(neutral,4),name='p5')
-            p6 = multiprocessing.Process(target=baserotate,args=(90,60,0.02),name='p6')
+            p5 = multiprocessing.Process(target=show, args=(neutral, 4), name='p5')  # Define p5 here
+            p6 = multiprocessing.Process(target=baserotate, args=(90, 60, 0.02), name='p6')
             p5.start()
             p6.start()
             p6.join()
